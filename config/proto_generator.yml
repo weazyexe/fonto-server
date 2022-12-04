@@ -1,2 +1,2 @@
 sourcesDirectory: "proto"
-generateDirectory: "internal/proto"
+generateDirectory: "internal/delivery/grpc/proto"

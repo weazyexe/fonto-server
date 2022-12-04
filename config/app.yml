@@ -1,0 +1,7 @@
+port: "9002"
+
+postgres:
+  host: "localhost"
+  port: "55000"
+  dbname: "fonto"
+
