@@ -1,0 +1,2 @@
+sourcesDirectory: "proto"
+generateDirectory: "internal/proto"
