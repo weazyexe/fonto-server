@@ -1,4 +1,4 @@
-module github.com/weazyexe/fonto
+module github.com/weazyexe/fonto-server
 
 go 1.19
 

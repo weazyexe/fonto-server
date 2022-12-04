@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/weazyexe/fonto/proto/greeter";
+option go_package = "github.com/weazyexe/fonto-server/internal/proto/greeter";
 
 service GreeterService {
     rpc SayHello (HelloRequest) returns (HelloResponse);

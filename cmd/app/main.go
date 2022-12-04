@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/weazyexe/fonto/internal/app"
+	"github.com/weazyexe/fonto-server/internal/app"
 )
 
 func main() {
