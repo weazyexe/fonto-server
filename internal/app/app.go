@@ -1,11 +1,14 @@
 package app
 
 import (
-	"database/sql"
 	"fmt"
 	"github.com/joho/godotenv"
 	delivery "github.com/weazyexe/fonto-server/internal/delivery/grpc"
-	"log"
+	"github.com/weazyexe/fonto-server/internal/repository"
+	"github.com/weazyexe/fonto-server/internal/service"
+	"github.com/weazyexe/fonto-server/pkg/logger"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"net"
 	"os"
 
@@ -14,23 +17,30 @@ import (
 )
 
 func Run(configPath string) {
+	// Initializing logger
+	logger.InitializeLogger()
+
 	// Loading environment variables
 	if err := godotenv.Load(); err != nil {
-		log.Fatalf("❌ Failed to load enviroment variables: %v", err)
+		logger.Zap.Fatalf("Failed to load enviroment variables: %v", err)
 	}
 
 	// Reading config files
 	config, err := ReadConfig(configPath)
 	if err != nil {
-		log.Fatalf("❌ Failed to read config: %v\n%v", configPath, err)
+		logger.Zap.Fatalf("Failed to read config: %v\n%v", configPath, err)
 	}
-	log.Println("📝 Configs was read")
+	logger.Zap.Info("Configs was read")
 
 	// Establishing connection to postgres database
 	db := establishPostgresConnection(config.Postgres)
-	defer func(db *sql.DB) {
-		if err := db.Close(); err != nil {
-			log.Fatalf("❌ Failed to close database connection: %v", err)
+	defer func(db *gorm.DB) {
+		sqlDb, err := db.DB()
+		if err != nil {
+			logger.Zap.Fatalf("Failed to open database connection: %v", err)
+		}
+		if err := sqlDb.Close(); err != nil {
+			logger.Zap.Fatalf("Failed to close database connection: %v", err)
 		}
 	}(db)
 
@@ -38,34 +48,38 @@ func Run(configPath string) {
 	lis := listenToPort(config.Port)
 
 	// Initializing gRPC server & receivers
-	server := initializeGrpc()
+	server := initializeGrpc(db)
 
 	// RUN
-	log.Println("🏄 Here we go!")
+	logger.Zap.Info("Here we go!")
 	if err := server.Serve(lis); err != nil {
-		log.Fatalf("❌ Failed to serve: %v", err)
+		logger.Zap.Fatalf("❌ Failed to serve: %v", err)
 	}
 }
 
-func establishPostgresConnection(config Postgres) *sql.DB {
-	connectionString := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+func establishPostgresConnection(config Postgres) *gorm.DB {
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		config.Host,
 		os.Getenv("POSTGRES_USER"),
 		os.Getenv("POSTGRES_PASSWORD"),
-		config.Host,
-		config.Port,
 		config.DbName,
+		config.Port,
 	)
-	db, err := sql.Open("postgres", connectionString)
+	db, err := gorm.Open(
+		postgres.New(
+			postgres.Config{
+				DSN:                  dsn,
+				PreferSimpleProtocol: true, // disables implicit prepared statement usage
+			},
+		),
+		&gorm.Config{},
+	)
 	if err != nil {
-		log.Fatalf("❌ Failed to open connection to the database: %v", err)
+		logger.Zap.Fatalf("Failed to open connection to the database: %v", err)
 	}
 
-	err = db.Ping()
-	if err != nil {
-		log.Fatalf("❌ Failed to connect to the database: %v", err)
-	}
-	log.Printf("🔑 Connected to PostgreSQL")
+	logger.Zap.Info("Connected to PostgreSQL")
 
 	return db
 }
@@ -73,15 +87,27 @@ func establishPostgresConnection(config Postgres) *sql.DB {
 func listenToPort(port string) net.Listener {
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		log.Fatalf("❌ Failed to listen: %v", err)
+		logger.Zap.Fatalf("❌ Failed to listen: %v", err)
 	}
-	log.Printf("👂 Server is listening at %v", lis.Addr())
+	logger.Zap.Infof("Server is listening at %v", lis.Addr())
 	return lis
 }
 
-func initializeGrpc() *grpc.Server {
+func initializeGrpc(db *gorm.DB) *grpc.Server {
 	s := grpc.NewServer()
+
+	// Authentication feature
+	authRepo := repository.NewAuthRepository(db)
+	authService := service.NewAuthService(
+		authRepo,
+		[]byte(os.Getenv("ACCESS_TOKEN_SECRET")),
+		[]byte(os.Getenv("REFRESH_TOKEN_SECRET")),
+	)
+	delivery.NewAuthReceiver(authService).Register(s)
+
+	// Greeter feature
 	delivery.NewGreeterReceiver().Register(s)
-	log.Println("💻 Initialized gRPC server")
+
+	logger.Zap.Info("Initialized gRPC server")
 	return s
 }

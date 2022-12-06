@@ -3,12 +3,14 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"github.com/weazyexe/fonto-server/internal/delivery/grpc/common"
 	pb "github.com/weazyexe/fonto-server/internal/delivery/grpc/proto/greeter"
 	"google.golang.org/grpc"
 )
 
 type GreeterReceiver struct {
-	pb.UnimplementedGreeterServiceServer
+	common.Receiver
+	pb.UnimplementedGreeterServer
 }
 
 func NewGreeterReceiver() *GreeterReceiver {
@@ -16,7 +18,7 @@ func NewGreeterReceiver() *GreeterReceiver {
 }
 
 func (receiver *GreeterReceiver) Register(server *grpc.Server) {
-	pb.RegisterGreeterServiceServer(server, receiver)
+	pb.RegisterGreeterServer(server, receiver)
 }
 
 func (receiver *GreeterReceiver) SayHello(_ context.Context, in *pb.HelloRequest) (*pb.HelloResponse, error) {
