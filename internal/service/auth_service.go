@@ -1,11 +1,12 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"github.com/weazyexe/fonto-server/internal/repository"
 	"github.com/weazyexe/fonto-server/pkg/crypto"
 	"github.com/weazyexe/fonto-server/pkg/domain"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type AuthService struct {
@@ -29,20 +30,20 @@ func NewAuthService(
 func (service *AuthService) SignUp(email, password string) (*domain.Token, error) {
 	doesUserExist, err := service.repository.DoesUserExist(email)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error while finding user in the database\n%v", err))
+		return nil, status.Error(codes.Internal, "Error while finding user in the database")
 	}
 
 	if doesUserExist {
-		return nil, errors.New(fmt.Sprintf("User %s already exists", email))
+		return nil, status.Error(codes.AlreadyExists, fmt.Sprintf("User %s already exists", email))
 	}
 
 	user, err := service.repository.CreateUser(email, password)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error while creating user %s\n%v", email, err))
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Error while creating user %s", email))
 	}
 	token, err := crypto.MakeJwt(user.ID, service.accessTokenSecret, service.refreshTokenSecret)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error while generating JWT\n%v", err))
+		return nil, status.Error(codes.Internal, "Error while generating access tokens")
 	}
 
 	return token, nil
