@@ -5,6 +5,7 @@ import (
 	"github.com/weazyexe/fonto-server/internal/delivery/grpc/common"
 	pb "github.com/weazyexe/fonto-server/internal/delivery/grpc/proto/auth"
 	"github.com/weazyexe/fonto-server/internal/service"
+	"github.com/weazyexe/fonto-server/pkg/errors"
 	"github.com/weazyexe/fonto-server/pkg/logger"
 	"google.golang.org/grpc"
 )
@@ -27,11 +28,16 @@ func (receiver *AuthReceiver) SignUp(_ context.Context, in *pb.SignUpRequest) (*
 	tokens, err := receiver.service.SignUp(in.GetEmail(), in.GetPassword())
 	if err != nil {
 		logger.Zap.Error(err)
-		return nil, err
+		return nil, errors.MapToGrpcError(err)
 	}
 	return &pb.TokenResponse{AccessToken: tokens.Access, RefreshToken: tokens.Refresh}, nil
 }
 
-func (receiver *AuthReceiver) SignIn(_ context.Context, _ *pb.SignInRequest) (*pb.TokenResponse, error) {
-	return nil, nil
+func (receiver *AuthReceiver) SignIn(_ context.Context, in *pb.SignInRequest) (*pb.TokenResponse, error) {
+	tokens, err := receiver.service.SignIn(in.GetEmail(), in.GetPassword())
+	if err != nil {
+		logger.Zap.Error(err)
+		return nil, errors.MapToGrpcError(err)
+	}
+	return &pb.TokenResponse{AccessToken: tokens.Access, RefreshToken: tokens.Refresh}, nil
 }

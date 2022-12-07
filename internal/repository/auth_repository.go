@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"errors"
 	"github.com/weazyexe/fonto-server/internal/domain"
 	"github.com/weazyexe/fonto-server/pkg/crypto"
+	"github.com/weazyexe/fonto-server/pkg/errors"
 	"gorm.io/gorm"
 	"time"
 )
@@ -17,18 +17,24 @@ func NewAuthRepository(db *gorm.DB) *AuthRepository {
 }
 
 func (repo *AuthRepository) DoesUserExist(email string) (bool, error) {
-	user := domain.User{Email: email}
-	result := repo.db.First(&user, "email = ?", email)
-
-	err := result.Error
+	_, err := repo.GetUserByEmail(email)
+	err = errors.MapToAppError(err)
 	switch {
-	case err != nil && errors.Is(err, gorm.ErrRecordNotFound):
+	case err != nil && err == errors.ErrorNotFound:
 		return false, nil
 	case err != nil:
 		return false, err
 	}
-
 	return true, nil
+}
+
+func (repo *AuthRepository) GetUserByEmail(email string) (*domain.User, error) {
+	user := domain.User{Email: email}
+	result := repo.db.First(&user, "email = ?", email)
+	if err := errors.MapToAppError(result.Error); err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 func (repo *AuthRepository) CreateUser(email, password string) (*domain.User, error) {
@@ -39,9 +45,8 @@ func (repo *AuthRepository) CreateUser(email, password string) (*domain.User, er
 		LastVisitedAt: time.Now(),
 	}
 	result := repo.db.Create(&user)
-	if result.Error != nil {
-		return nil, result.Error
+	if err := errors.MapToAppError(result.Error); err != nil {
+		return nil, err
 	}
-
 	return &user, nil
 }

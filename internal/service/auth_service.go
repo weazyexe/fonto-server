@@ -1,12 +1,10 @@
 package service
 
 import (
-	"fmt"
 	"github.com/weazyexe/fonto-server/internal/repository"
 	"github.com/weazyexe/fonto-server/pkg/crypto"
 	"github.com/weazyexe/fonto-server/pkg/domain"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/weazyexe/fonto-server/pkg/errors"
 )
 
 type AuthService struct {
@@ -30,28 +28,40 @@ func NewAuthService(
 func (service *AuthService) SignUp(email, password string) (*domain.Token, error) {
 	doesUserExist, err := service.repository.DoesUserExist(email)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Error while finding user in the database")
+		return nil, err
 	}
 
 	if doesUserExist {
-		return nil, status.Error(codes.AlreadyExists, fmt.Sprintf("User %s already exists", email))
+		return nil, err
 	}
 
 	user, err := service.repository.CreateUser(email, password)
 	if err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("Error while creating user %s", email))
+		return nil, err
 	}
 	token, err := crypto.MakeJwt(user.ID, service.accessTokenSecret, service.refreshTokenSecret)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Error while generating access tokens")
+		return nil, errors.ErrorInternal
 	}
 
 	return token, nil
 }
 
-func (service *AuthService) SignIn(_, _ string) (*domain.Token, error) {
-	// 1) find user with the same email
-	// 2) compare password with password in our database
-	// 2) generate jwt
-	return &domain.Token{}, nil
+func (service *AuthService) SignIn(email, password string) (*domain.Token, error) {
+	user, err := service.repository.GetUserByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	hash := crypto.Hash(password)
+	if user.PasswordHash != hash {
+		return nil, errors.ErrorWrongPassword
+	}
+
+	token, err := crypto.MakeJwt(user.ID, service.accessTokenSecret, service.refreshTokenSecret)
+	if err != nil {
+		return nil, errors.ErrorInternal
+	}
+
+	return token, nil
 }
