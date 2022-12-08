@@ -1,7 +1,11 @@
-port: "9002"
+port: "9001"
 
 postgres:
   host: "localhost"
   port: "55000"
   dbname: "fonto"
 
+auth:
+  iss: "from somewhere in the clouds" # JWT issuer
+  access_exp_sec: 900                 # 15 minutes
+  refresh_exp_sec: 129600             # 2 weeks

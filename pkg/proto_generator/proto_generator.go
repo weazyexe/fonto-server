@@ -2,25 +2,28 @@ package proto_generator
 
 import (
 	"fmt"
-	"log"
+	"github.com/weazyexe/fonto-server/pkg/logger"
 	"os"
 	"os/exec"
 	"strings"
 )
 
 func Run(configPath string) {
+	logger.InitializeLogger()
+	defer logger.Zap.Sync()
+
 	config, err := ReadConfig(configPath)
 	if err != nil {
-		log.Fatalf("❌ Error while reading config file: %v\n%v", configPath, err)
+		logger.Zap.Fatalf("Error while reading config file: %v\n%v", configPath, err)
 	}
 
 	files, err := os.ReadDir(config.SourcesDirectory)
 	if err != nil {
-		log.Fatalf("❌ Error while reading directory %v", config.SourcesDirectory)
+		logger.Zap.Fatalf("Error while reading directory %v", config.SourcesDirectory)
 	}
 
 	for _, file := range files {
-		log.Printf("⏳ Compiling %v\n", file.Name())
+		logger.Zap.Infof("Compiling %v", file.Name())
 		nameWithoutExtension := strings.Split(file.Name(), ".")[0]
 
 		createFolderIfNeeds(nameWithoutExtension, config.GenerateDirectory)
@@ -32,11 +35,11 @@ func Run(configPath string) {
 		)
 
 		if err := command.Run(); err != nil {
-			log.Fatalf("❌ Error while compiling %v\n%v", file.Name(), err)
+			logger.Zap.Fatalf("Error while compiling %v\n%v", file.Name(), err)
 		}
 	}
 
-	log.Println("✨ Proto has been compiled")
+	logger.Zap.Info("Proto has been compiled")
 }
 
 func createFolderIfNeeds(name, where string) {
@@ -44,8 +47,7 @@ func createFolderIfNeeds(name, where string) {
 		mkdirCommand := exec.Command("mkdir", name)
 		mkdirCommand.Dir = where
 		if err := mkdirCommand.Run(); err != nil {
-			log.Fatalf("❌ Can't create new folder: %v\n%v", name, err)
-			return
+			logger.Zap.Fatalf("Can't create new folder: %v\n%v", name, err)
 		}
 	}
 }

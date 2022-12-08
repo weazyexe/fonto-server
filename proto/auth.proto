@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "github.com/weazyexe/fonto-server/internal/proto/auth";
+
+service Auth {
+  rpc SignUp(SignUpRequest) returns (TokenResponse);
+  rpc SignIn(SignInRequest) returns (TokenResponse);
+}
+
+message SignUpRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message SignInRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message TokenResponse {
+  string accessToken = 1;
+  string refreshToken = 2;
+}
