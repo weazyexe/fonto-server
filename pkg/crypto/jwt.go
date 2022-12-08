@@ -60,6 +60,27 @@ func (manager *JwtManager) Generate(userId uint) (*domain.Token, error) {
 	return &domain.Token{Access: access, Refresh: refresh}, nil
 }
 
+func (manager *JwtManager) GenerateFrom(token string) (*domain.Token, error) {
+	isTokenValid, err := manager.ValidateRefreshToken(token)
+	if err != nil {
+		return nil, err
+	}
+	if !isTokenValid {
+		return nil, errors.ErrorInvalidToken
+	}
+
+	parsed, err := parseToken(token, generateTokenSecret(manager.refreshTokenSecret))
+	if err != nil {
+		return nil, err
+	}
+
+	if userId, ok := parsed["userId"].(float64); ok {
+		return manager.Generate(uint(userId))
+	}
+
+	return nil, errors.ErrorInternal
+}
+
 func (manager *JwtManager) ValidateAccessToken(token string) (bool, error) {
 	return validate(token, generateTokenSecret(manager.accessTokenSecret))
 }
@@ -83,19 +104,19 @@ func generateJwt(
 }
 
 func generateTokenClaims(userId uint, expiresInSeconds int64, issuer string) *jwt.MapClaims {
-	expires := time.Now().Add(time.Second + time.Duration(expiresInSeconds))
+	expires := time.Now().Add(time.Second * time.Duration(expiresInSeconds))
 	notBefore := time.Now()
 
 	return &jwt.MapClaims{
-		"username": userId,
-		"iss":      issuer,
-		"nbf":      notBefore.UTC().Unix(),
-		"exp":      expires.UTC().Unix(),
+		"userId": userId,
+		"iss":    issuer,
+		"nbf":    notBefore.UTC().Unix(),
+		"exp":    expires.UTC().Unix(),
 	}
 }
 
 func validate(token string, secret jwt.Keyfunc) (bool, error) {
-	parsed, err := jwt.Parse(token, secret)
+	parsed, err := parseToken(token, secret)
 
 	switch {
 	case err != nil && isTokenInvalidError(err):
@@ -104,11 +125,24 @@ func validate(token string, secret jwt.Keyfunc) (bool, error) {
 		return false, errors.ErrorTokenValidation
 	}
 
-	if _, ok := parsed.Claims.(jwt.MapClaims); ok && parsed.Valid {
+	if err := parsed.Valid(); err == nil {
 		return true, nil
 	} else {
 		return false, nil
 	}
+}
+
+func parseToken(token string, secret jwt.Keyfunc) (jwt.MapClaims, error) {
+	parsed, err := jwt.Parse(token, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := parsed.Claims.(jwt.MapClaims); ok {
+		return claims, nil
+	}
+
+	return nil, errors.ErrorTokenValidation
 }
 
 func generateTokenSecret(secret []byte) jwt.Keyfunc {
