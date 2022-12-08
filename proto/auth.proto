@@ -5,6 +5,7 @@ option go_package = "github.com/weazyexe/fonto-server/internal/proto/auth";
 service Auth {
   rpc SignUp(SignUpRequest) returns (TokenResponse);
   rpc SignIn(SignInRequest) returns (TokenResponse);
+  rpc RefreshToken(RefreshRequest) returns (TokenResponse);
 }
 
 message SignUpRequest {
@@ -20,4 +21,8 @@ message SignInRequest {
 message TokenResponse {
   string accessToken = 1;
   string refreshToken = 2;
+}
+
+message RefreshRequest {
+  string refreshToken = 1;
 }

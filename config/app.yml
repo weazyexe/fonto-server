@@ -8,4 +8,4 @@ postgres:
 auth:
   iss: "from somewhere in the clouds" # JWT issuer
   access_exp_sec: 900                 # 15 minutes
-  refresh_exp_sec: 129600             # 2 weeks
+  refresh_exp_sec: 1209600             # 2 weeks

@@ -59,3 +59,11 @@ func (service *AuthService) SignIn(email, password string) (*domain.Token, error
 
 	return token, nil
 }
+
+func (service *AuthService) RefreshToken(token string) (*domain.Token, error) {
+	newTokens, err := service.jwtManager.GenerateFrom(token)
+	if err != nil {
+		return nil, err
+	}
+	return newTokens, nil
+}

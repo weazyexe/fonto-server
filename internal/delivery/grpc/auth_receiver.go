@@ -41,3 +41,12 @@ func (receiver *AuthReceiver) SignIn(_ context.Context, in *pb.SignInRequest) (*
 	}
 	return &pb.TokenResponse{AccessToken: tokens.Access, RefreshToken: tokens.Refresh}, nil
 }
+
+func (receiver *AuthReceiver) RefreshToken(_ context.Context, in *pb.RefreshRequest) (*pb.TokenResponse, error) {
+	tokens, err := receiver.service.RefreshToken(in.GetRefreshToken())
+	if err != nil {
+		logger.Zap.Error(err)
+		return nil, errors.ToGrpcError(err)
+	}
+	return &pb.TokenResponse{AccessToken: tokens.Access, RefreshToken: tokens.Refresh}, nil
+}
