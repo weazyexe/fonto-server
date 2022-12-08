@@ -10,6 +10,7 @@ import (
 
 func Run(configPath string) {
 	logger.InitializeLogger()
+	defer logger.Zap.Sync()
 
 	config, err := ReadConfig(configPath)
 	if err != nil {

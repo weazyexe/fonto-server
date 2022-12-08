@@ -18,7 +18,7 @@ func NewAuthRepository(db *gorm.DB) *AuthRepository {
 
 func (repo *AuthRepository) DoesUserExist(email string) (bool, error) {
 	_, err := repo.GetUserByEmail(email)
-	err = errors.MapToAppError(err)
+	err = errors.FromGormError(err)
 	switch {
 	case err != nil && err == errors.ErrorNotFound:
 		return false, nil
@@ -31,7 +31,7 @@ func (repo *AuthRepository) DoesUserExist(email string) (bool, error) {
 func (repo *AuthRepository) GetUserByEmail(email string) (*domain.User, error) {
 	user := domain.User{Email: email}
 	result := repo.db.First(&user, "email = ?", email)
-	if err := errors.MapToAppError(result.Error); err != nil {
+	if err := errors.FromGormError(result.Error); err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -45,7 +45,7 @@ func (repo *AuthRepository) CreateUser(email, password string) (*domain.User, er
 		LastVisitedAt: time.Now(),
 	}
 	result := repo.db.Create(&user)
-	if err := errors.MapToAppError(result.Error); err != nil {
+	if err := errors.FromGormError(result.Error); err != nil {
 		return nil, err
 	}
 	return &user, nil

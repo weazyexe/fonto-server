@@ -8,21 +8,15 @@ import (
 )
 
 type AuthService struct {
-	repository         *repository.AuthRepository
-	accessTokenSecret  []byte
-	refreshTokenSecret []byte
+	repository *repository.AuthRepository
+	jwtManager *crypto.JwtManager
 }
 
 func NewAuthService(
 	repo *repository.AuthRepository,
-	accessTokenSecret,
-	refreshTokenSecret []byte,
+	manager *crypto.JwtManager,
 ) *AuthService {
-	return &AuthService{
-		repo,
-		accessTokenSecret,
-		refreshTokenSecret,
-	}
+	return &AuthService{repo, manager}
 }
 
 func (service *AuthService) SignUp(email, password string) (*domain.Token, error) {
@@ -39,7 +33,7 @@ func (service *AuthService) SignUp(email, password string) (*domain.Token, error
 	if err != nil {
 		return nil, err
 	}
-	token, err := crypto.MakeJwt(user.ID, service.accessTokenSecret, service.refreshTokenSecret)
+	token, err := service.jwtManager.Generate(user.ID)
 	if err != nil {
 		return nil, errors.ErrorInternal
 	}
@@ -58,7 +52,7 @@ func (service *AuthService) SignIn(email, password string) (*domain.Token, error
 		return nil, errors.ErrorWrongPassword
 	}
 
-	token, err := crypto.MakeJwt(user.ID, service.accessTokenSecret, service.refreshTokenSecret)
+	token, err := service.jwtManager.Generate(user.ID)
 	if err != nil {
 		return nil, errors.ErrorInternal
 	}

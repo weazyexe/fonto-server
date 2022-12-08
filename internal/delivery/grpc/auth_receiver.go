@@ -28,7 +28,7 @@ func (receiver *AuthReceiver) SignUp(_ context.Context, in *pb.SignUpRequest) (*
 	tokens, err := receiver.service.SignUp(in.GetEmail(), in.GetPassword())
 	if err != nil {
 		logger.Zap.Error(err)
-		return nil, errors.MapToGrpcError(err)
+		return nil, errors.ToGrpcError(err)
 	}
 	return &pb.TokenResponse{AccessToken: tokens.Access, RefreshToken: tokens.Refresh}, nil
 }
@@ -37,7 +37,7 @@ func (receiver *AuthReceiver) SignIn(_ context.Context, in *pb.SignInRequest) (*
 	tokens, err := receiver.service.SignIn(in.GetEmail(), in.GetPassword())
 	if err != nil {
 		logger.Zap.Error(err)
-		return nil, errors.MapToGrpcError(err)
+		return nil, errors.ToGrpcError(err)
 	}
 	return &pb.TokenResponse{AccessToken: tokens.Access, RefreshToken: tokens.Refresh}, nil
 }

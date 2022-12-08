@@ -12,11 +12,15 @@ var (
 	ErrorAlreadyExists    = errors.New("record already exists")
 	ErrorDatabaseTroubles = errors.New("database interaction resulted an errors")
 	ErrorWrongPassword    = errors.New("wrong password")
+	ErrorNoMetadata       = errors.New("please provide metadata")
+	ErrorNoAuthHeader     = errors.New("please provide Authorization header with access token")
+	ErrorInvalidToken     = errors.New("invalid token")
+	ErrorTokenValidation  = errors.New("token is invalid")
 	ErrorInternal         = errors.New("server internal errors")
 )
 
-// MapToAppError Maps GORM errors to app errors
-func MapToAppError(err error) error {
+// FromGormError Maps GORM errors to app errors
+func FromGormError(err error) error {
 	switch {
 	case err == nil:
 		return nil
@@ -27,8 +31,8 @@ func MapToAppError(err error) error {
 	}
 }
 
-// MapToGrpcError Maps app errors to gRPC errors
-func MapToGrpcError(err error) error {
+// ToGrpcError Maps app errors to gRPC errors
+func ToGrpcError(err error) error {
 	switch {
 	case err == nil:
 		return nil
@@ -36,6 +40,12 @@ func MapToGrpcError(err error) error {
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, ErrorAlreadyExists):
 		return status.Error(codes.AlreadyExists, err.Error())
+	case errors.Is(err, ErrorNoMetadata) ||
+		errors.Is(err, ErrorNoAuthHeader) ||
+		errors.Is(err, ErrorWrongPassword) ||
+		errors.Is(err, ErrorInvalidToken) ||
+		errors.Is(err, ErrorTokenValidation):
+		return status.Error(codes.Unauthenticated, err.Error())
 	default:
 		return status.Error(codes.Internal, err.Error())
 	}

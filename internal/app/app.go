@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"github.com/joho/godotenv"
 	delivery "github.com/weazyexe/fonto-server/internal/delivery/grpc"
+	"github.com/weazyexe/fonto-server/internal/delivery/grpc/interceptors"
 	"github.com/weazyexe/fonto-server/internal/repository"
 	"github.com/weazyexe/fonto-server/internal/service"
+	"github.com/weazyexe/fonto-server/pkg/crypto"
 	"github.com/weazyexe/fonto-server/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -19,6 +21,7 @@ import (
 func Run(configPath string) {
 	// Initializing logger
 	logger.InitializeLogger()
+	defer logger.Zap.Sync()
 
 	// Loading environment variables
 	if err := godotenv.Load(); err != nil {
@@ -94,15 +97,17 @@ func listenToPort(port string) net.Listener {
 }
 
 func initializeGrpc(db *gorm.DB) *grpc.Server {
-	s := grpc.NewServer()
-
-	// Authentication feature
-	authRepo := repository.NewAuthRepository(db)
-	authService := service.NewAuthService(
-		authRepo,
+	jwtManager := crypto.NewJwtManager(
 		[]byte(os.Getenv("ACCESS_TOKEN_SECRET")),
 		[]byte(os.Getenv("REFRESH_TOKEN_SECRET")),
 	)
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(interceptors.NewAuthInterceptor(jwtManager).Intercept()),
+	)
+
+	// Authentication feature
+	authRepo := repository.NewAuthRepository(db)
+	authService := service.NewAuthService(authRepo, jwtManager)
 	delivery.NewAuthReceiver(authService).Register(s)
 
 	// Greeter feature
