@@ -52,7 +52,7 @@ func (interceptor *AuthInterceptor) authorize(ctx context.Context) error {
 	}
 
 	accessToken := strings.Split(values[0], " ")[1]
-	isValid, err := interceptor.jwtManager.Validate(accessToken)
+	isValid, err := interceptor.jwtManager.ValidateAccessToken(accessToken)
 	if err != nil {
 		return errors.ErrorTokenValidation
 	}

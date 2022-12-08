@@ -8,6 +8,7 @@ import (
 	"github.com/weazyexe/fonto-server/internal/repository"
 	"github.com/weazyexe/fonto-server/internal/service"
 	"github.com/weazyexe/fonto-server/pkg/crypto"
+	"github.com/weazyexe/fonto-server/pkg/domain"
 	"github.com/weazyexe/fonto-server/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -51,7 +52,7 @@ func Run(configPath string) {
 	lis := listenToPort(config.Port)
 
 	// Initializing gRPC server & receivers
-	server := initializeGrpc(db)
+	server := initializeGrpc(db, config.Auth)
 
 	// RUN
 	logger.Zap.Info("Here we go!")
@@ -96,10 +97,15 @@ func listenToPort(port string) net.Listener {
 	return lis
 }
 
-func initializeGrpc(db *gorm.DB) *grpc.Server {
+func initializeGrpc(db *gorm.DB, authConfig Auth) *grpc.Server {
 	jwtManager := crypto.NewJwtManager(
 		[]byte(os.Getenv("ACCESS_TOKEN_SECRET")),
 		[]byte(os.Getenv("REFRESH_TOKEN_SECRET")),
+		&domain.JwtConfig{
+			Issuer:               authConfig.Issuer,
+			ExpireTimeForAccess:  authConfig.ExpireTimeForAccess,
+			ExpireTimeForRefresh: authConfig.ExpireTimeForRefresh,
+		},
 	)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(interceptors.NewAuthInterceptor(jwtManager).Intercept()),
